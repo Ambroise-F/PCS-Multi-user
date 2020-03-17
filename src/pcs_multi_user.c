@@ -1,0 +1,381 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <math.h>
+#include <gmp.h>
+#include <omp.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <sys/time.h>
+#include <assert.h>
+#include "pcs_elliptic_curve_operations.h"
+#include "pcs_pollard_rho.h"
+#include "pcs_storage.h"
+#include "pcs.h"
+#include "pcs_multi_user.h"
+
+#define FF fflush(stdout)
+
+elliptic_curve_t E;
+point_t P;
+point_t Q[__NB_USERS__]; // One Q per user
+mpz_t n;
+mpz_t *A;
+mpz_t *B;
+mpz_t X_res[__NB_USERS__]; // One x per user
+point_t M[__NB_ENSEMBLES__]; // precomputed a*P values
+uint8_t trailling_bits;
+uint8_t nb_bits;
+
+/** Determines whether a point is a distinguished one.
+ *
+ *  @param[in]	R				A point on an elliptic curve.
+ *  @param[in]	trailling_bits	Number of trailling zero bits in a ditinguished point.
+ *  @param[out]	q				The x-coordinate, without the trailling zeros.
+ *  @return 	1 if the point is distinguished, 0 otherwise.
+ */
+int is_distinguished_mu(point_t R, int trailling_bits, mpz_t *q)
+{
+	int res;
+	mpz_t r;
+	mpz_inits(r, NULL);
+	mpz_tdiv_qr_ui(*q, r, R.x, (unsigned long int)pow(2, trailling_bits));
+	res=(mpz_sgn(r) == 0);
+	mpz_clears(r, NULL);
+	return (res);
+}
+
+
+/** Checks if the linear combination aP+bQ is equal to R or its inverse.
+ *
+ *  @param[in]	R	A point on an elliptic curve.
+ *  @param[in]	a	a coefficient.
+ *  @param[in]	b	b coefficient.
+ *  @param[in]  user    user id
+ *  @return 	1 if aP+bQ[user] = R, 0 if aP+bQ[user] = -R.
+ */
+int same_point_mu(point_t R, mpz_t a, mpz_t b, uint16_t user)
+{
+	int res;
+	point_t S1, S2, S;
+	mpz_inits(S1.x, S1.y, S1.z, S2.x, S2.y, S2.z, S.x, S.y, S.z, NULL);
+	double_and_add(&S1, P, a, E); // S1 = aP
+	double_and_add(&S2, Q[user], b, E); // S2 = bQ[user]
+	add(&S, S1, S2, E); // S2 = aP + bQ
+	res=(mpz_cmp(R.y, S.y) == 0); //
+	mpz_clears(S1.x, S1.y, S1.z, S2.x, S2.y, S2.z, S.x, S.y, S.z, NULL);
+	return res;
+}
+
+/** Computes R = a * P  on E.
+ *
+ *  @param[out]	R	Resulting point.
+ *  @param[in]	a	a coefficient.
+ */
+void lin_comb_mu(point_t * R, mpz_t a)
+{
+	double_and_add(R, P, a, E);
+}
+
+/** Checks if there is a collision.
+ *
+ */
+//int is_collision(mpz_t x, mpz_t a1, mpz_t a2, int trailling_bits)
+int is_collision_mu(mpz_t x, mpz_t b1, uint16_t userid1, mpz_t b2, uint16_t userid2, int trailling_bits)
+{
+	uint8_t r;
+	mpz_t xDist_;
+	int retval = 0;
+	mpz_t a1, a2;
+	point_t R;
+        
+	point_init(&R);
+	mpz_inits(a1, a2, xDist_, NULL);
+	
+	mpz_set_ui(a2, 0); // a1 = a2 = 0
+	mpz_set_ui(a1, 0);
+
+
+
+	
+	//recompute first a,b pair
+	
+	double_and_add(&R, Q[userid1], b1, E); // R = b1 * Qi
+	
+	while(!is_distinguished_mu(R, trailling_bits, &xDist_))
+	{
+		r = hash(R.y);
+		compute_a(a1, A[r], n); // a1 = a1 + A[r] % n   <=> ajout de A[r] au coeff a1
+		f(R, M[r], &R, E);      // R  = R  + M[r]       <=> calcul du point R = R + M[r] = R + A[r]*P
+	}
+
+	
+	//recompute second a,b pair
+	
+	double_and_add(&R, Q[userid2], b2, E);
+	
+	while(!is_distinguished_mu(R, trailling_bits, &xDist_))
+	{
+		r = hash(R.y);
+		compute_a(a2, A[r], n); 
+		f(R, M[r], &R, E);
+	}
+
+
+
+
+	
+	if(userid1==userid2 && mpz_cmp(b1, b2) != 0) //two different pairs with the same Q, so collision
+	{
+          if(!same_point_mu(R, a1, b1,userid1)) //it's the inverse point // to be modified
+		{	
+			mpz_neg(a2, a2); 
+			mpz_mmod(a2, a2, n);
+			mpz_neg(b2, b2);
+			mpz_mmod(b2, b2, n);
+		}
+		compute_x(x, a1, a2, b1, b2, n);
+		retval = 1;
+	}
+        else if(userid1!=userid2) //two different Qs, so collision - userid2 has to be known
+        {
+          if(!same_point_mu(R, a1, b1,userid1)) //it's the inverse point // to be modified
+		{	
+			mpz_neg(a2, a2); 
+			mpz_mmod(a2, a2, n);
+			mpz_neg(b2, b2);
+			mpz_mmod(b2, b2, n);
+		}
+          compute_x_2users(x, a1, a2, b1, b2, X_res[userid2], n);
+          retval = 1;
+        }
+	point_clear(&R);
+	mpz_clears(a1, a2, xDist_, NULL);
+	return retval;
+}
+
+/** Initialize all variables needed to do a PCS algorithm.
+ *
+ */
+void pcs_mu_init(point_t  P_init,
+                 point_t Q_init[__NB_USERS__],
+                 elliptic_curve_t E_init,
+                 mpz_t n_init,
+                 mpz_t *A_init,
+                 uint8_t nb_bits_init,
+                 uint8_t trailling_bits_init,
+                 int type_struct,
+                 int nb_threads,
+                 uint8_t level)
+{
+  uint8_t i; //  __NB_ENSEMBLES__
+  int j; // __NB_USERS__
+  uint16_t user;
+
+        
+	point_init(&P);
+	//point_init(&Q);
+	curve_init(&E);
+	mpz_init(n);
+        
+        
+	mpz_set(P.x, P_init.x);
+	mpz_set(P.y, P_init.y);
+	mpz_set(P.z, P_init.z);
+	
+	//mpz_set(Q.x, Q_init.x);
+	//mpz_set(Q.y, Q_init.y);
+	//mpz_set(Q.z, Q_init.z);
+	
+	mpz_set(E.A, E_init.A);
+	mpz_set(E.B, E_init.B);
+	mpz_set(E.p, E_init.p);
+	
+	mpz_set(n, n_init);
+	
+	A = A_init;
+        
+        
+
+        for(j=0; j<__NB_USERS__; j++) // Q init
+          {
+            mpz_set(Q[j].x,Q_init[j].x); 
+            mpz_set(Q[j].y,Q_init[j].y);
+            mpz_set(Q[j].z,Q_init[j].z);
+            user = (uint16_t) j;
+            
+          }
+	for(i=0; i<__NB_ENSEMBLES__; i++) // has to be after Q inits at index j since it is needed for lin_comb_mu
+	  {
+	    mpz_inits(M[i].x,M[i].y,M[i].z,NULL);
+	    lin_comb_mu(&M[i],A[i]);
+	  }
+	
+	trailling_bits = trailling_bits_init;
+	nb_bits = nb_bits_init;
+	
+	struct_init_mu(type_struct, n, trailling_bits, nb_bits, nb_threads, level); // TODO : mu adaptation : done?
+}
+
+
+
+
+
+/** Run the PCS algorithm.
+ *
+ */
+long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads)
+{
+  point_t R;
+  mpz_t b, b2;
+  mpz_t x, xDist;
+  uint8_t r;
+  int trail_length;
+  int col;
+  int trail_length_max = pow(2, trailling_bits) * 20; // 20 * 1<<trailling_bits
+  int collision_count = 0;
+  // int userid1;
+  // int* userid2;
+  uint16_t userid1,userid2;
+  char xDist_str[50];
+
+  //nb_threads = 1;
+  //nb_threads = omp_get_max_threads();
+  //nb_threads = __NB_USERS__; // for testing purposes : userid1 = thread number
+  for (userid1=0; userid1<__NB_USERS__; userid1++){
+    
+#pragma omp parallel private(userid2, R, b, b2, x, r, xDist, xDist_str, trail_length,col) shared(collision_count, X_res, trail_length_max) num_threads(nb_threads)
+    {
+      col = 0;
+      point_init(&R);
+      mpz_inits(x, b, b2, xDist, NULL);
+
+		
+      //Initialize a starting point
+      gmp_randstate_t r_state;
+      gmp_randinit_default(r_state);
+      gmp_randseed_ui(r_state, time(NULL) * omp_get_thread_num() + 1);
+      mpz_urandomb(b, r_state, nb_bits); // random b
+      double_and_add(&R, Q[userid1], b, E); // R = bQi
+      trail_length = 0;
+      collision_count = 0;
+
+      while(collision_count < 1) 
+        {
+          
+          if(is_distinguished_mu(R, trailling_bits, &xDist)) // xDist = R.x >> trailling_bits
+            {
+              //printf("dist point!\n");fflush(stdout);
+
+              userid2 = __NB_USERS__; // debug / useless
+              if(struct_add_mu(b2, &userid2, b, userid1, xDist, xDist_str)) // ajout de b dans la mémoire, b2 = b d'un autre point avec collision 
+                {
+                
+                  //printf("added\n)");fflush(stdout);
+
+                  if(is_collision_mu(x, b, userid1, b2, userid2, trailling_bits)) // si b et b2 forment une vraie collision
+                    {
+                      //printf("\nThread num %d :\n",omp_get_thread_num());
+                      printf("True collision %2hu - %2hu",userid1,userid2);
+		      if(userid1!=userid2)
+			{
+			  printf(" ---- different origin");
+		    
+			}
+		      col = 1;
+                      printf("\n");
+		      
+#pragma omp critical
+                      {
+                        collision_count++;
+                        mpz_init_set(X_res[userid1],x);
+		      }
+                    }
+                  
+                }
+              //              else // pt distingué ajouté, pas de collision
+	      if(col==0){
+
+		mpz_urandomb(b, r_state, nb_bits);
+		double_and_add(&R, Q[userid1], b, E); // new start, R = bQi
+		trail_length = 0;
+	      }
+            }
+          else // R n'est pas un pt dist.
+            {
+
+            
+              r=hash(R.y); // y%20
+              //printf("f...\n");FF;
+              //printf("%d,%d\n",userid1,r);FF;
+              //gmp_printf("%Zd\n",M[userid1][r].x);FF;
+              f(R, M[r], &R, E); // 1 step (among 20) of the path
+              //gmp_printf("%Zd.",M[userid1][r].x);
+              //gmp_printf("%Zd-",M[userid1][r].y);FF;
+              //printf("f - ok\n");FF;
+              
+              trail_length++;
+              if(trail_length > trail_length_max)
+                {
+                  mpz_urandomb(b, r_state, nb_bits); // new random start  
+                  double_and_add(&R, Q[userid1], b, E);
+                  trail_length = 0;
+                }
+
+            }
+          
+        } // end while
+
+    point_clear(&R);
+    mpz_clears(b, b2, x, xDist, NULL);
+    gmp_randclear(r_state);
+    } // end omp parallel
+
+  } // end for
+  
+  for (userid1=0; userid1<__NB_USERS__; userid1++)
+    {
+      mpz_init_set(x_res[userid1],X_res[userid1]);
+    }
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+/** Free all variables used in the previous PCS run.
+ *
+ */
+void pcs_mu_clear()
+{
+  uint8_t i;
+  uint32_t j;
+ point_clear(&P);
+  for (j=0;j<__NB_USERS__;j++)
+    {
+      point_clear(&Q[j]);
+      
+    }
+  for(i = 0; i < __NB_ENSEMBLES__; i++)
+    {
+      point_clear(&M[i]);
+      //mpz_clears(M[i].x, M[i].y, M[i].z, NULL);
+    }
+  //point_clear(&Q);
+  curve_clear(&E);
+  mpz_clear(n);
+  /*
+  for(i = 0; i < __NB_ENSEMBLES__; i++)
+    {
+      mpz_clears(M[i].x, M[i].y, M[i].z, NULL);
+    }
+  */
+  //printf("struct_free\n");fflush(stdout);
+  struct_free_mu();
+  //printf("struct_free-ok\n");fflush(stdout);
+}

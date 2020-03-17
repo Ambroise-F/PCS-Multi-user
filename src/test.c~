@@ -1,0 +1,21 @@
+#include <stdio.h>
+#include <math.h>
+#include <gmp.h>
+#include <inttypes.h>
+
+
+
+
+int main()
+{
+  mpz_t a,b;
+  int r;
+  mpz_init(a);
+  mpz_init_set_ui(b,15);
+  gmp_printf("%Zd,%Zd\n",a,b);
+  r = mpz_mmod_ui(a,b,10);
+  gmp_printf("%Zd,%Zd\n",a,b);
+  printf("%d\n",r);
+  return r;
+}
+
