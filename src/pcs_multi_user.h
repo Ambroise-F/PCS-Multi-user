@@ -5,7 +5,7 @@
 #include "pcs.h"
 
 #define __NB_ENSEMBLES_MU__ 1
-#define __NB_USERS__ 40 // right now also number of threads so 8 = max for this pc
+#define __NB_USERS__ 5 // right now also number of threads so 8 = max for this pc
 
 //void combLin(point_t * R, mpz_t a, mpz_t b);
 

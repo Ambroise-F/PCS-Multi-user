@@ -165,7 +165,7 @@ int main(int argc,char * argv[])
     trailling_bits = 0;
    
     nb_threads = omp_get_max_threads(); // NBTHREADS
-    //nb_threads = ;
+    //nb_threads = 8;
     printf("Using %d threads (max_threads)\n",nb_threads);
     //nb_threads=1;
     //printf("max_threads : %d\n",omp_get_max_threads());
@@ -272,9 +272,8 @@ int main(int argc,char * argv[])
                     generate_random_key(key, nb_bits - 1,int_i+struct_i*20+test_i*30);
                     //compute Q
                     mpz_init_set(keys[int_i],key);
-                    gmp_printf("Key n°%d : %Zd\n",int_i,key);
+                    //gmp_printf("Key n°%d : %Zd\n",int_i,key);
                     double_and_add(&Q[int_i], P, key, E);
-                    //gmp_printf("key n°%d = %Zd\n",int_i,key); // to be removed
                   }		
 		/******* BEGIN: Setting up environment for experiment running and statistics *******/
 		
@@ -499,7 +498,7 @@ int main(int argc,char * argv[])
                                     if(mpz_cmp(xs[key_i], keys[key_i])==0)
                                       {
                                         printf("key n°%d is OK\n",key_i);
-                                        gmp_printf("key was %Zd - result is %Zd\n",keys[key_i],xs[key_i]);
+                                        //gmp_printf("key was %Zd - result is %Zd\n",keys[key_i],xs[key_i]);
                                       }
                                     else
                                       {

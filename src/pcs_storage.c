@@ -35,7 +35,7 @@ void struct_init_mu(uint8_t type, mpz_t n, uint8_t trailling_bits, uint8_t nb_bi
     struct_type = type;
 	switch(struct_type)
 	{
-		case 0: struct_init_PRTL(nb_bits, trailling_bits, nb_threads, level);
+		case 0: struct_init_PRTL_mu(nb_bits, trailling_bits, nb_threads, level);
 			break;
         default:
 			struct_init_hash_mu(struct_type, n, trailling_bits, level);
@@ -112,7 +112,7 @@ void struct_free_mu()
 {
 	switch(struct_type)
 	{
-		case 0: struct_free_PRTL();
+		case 0: struct_free_PRTL_mu();
 			break;
         default: 
 			struct_free_hash_mu();
@@ -144,7 +144,7 @@ unsigned long long int struct_memory_mu(unsigned long int *nb_points, float *rat
 {
 	switch(struct_type)
 	{
-		case 0: return struct_memory_PRTL(nb_points, rate_of_use, rate_slots);
+		case 0: return struct_memory_PRTL_mu(nb_points, rate_of_use, rate_slots);
 			break;
         default:
 			return struct_memory_hash_mu(nb_points, rate_of_use, rate_slots);

@@ -83,18 +83,3 @@ void vect_bin_cpy(_vect_bin_t *out, _vect_bin_t *in);
 int vect_bin_is_empty(_vect_bin_t *v);
 
 
-
-void print_vect_bin(_vect_bin_mu_t *);
-_vect_bin_mu_t *vect_bin_mu_t_reset(_vect_bin_mu_t *);
-_bool_t vect_bin_get_bit(_vect_bin_mu_t *, int);
-void vect_bin_set_1(_vect_bin_mu_t *, int);
-void vect_bin_set_0(_vect_bin_mu_t *, int);
-char *vect_bin_mu_to_binary_string(_vect_bin_mu_t *, char *);
-_vect_bin_mu_t *vect_bin_set_int(_vect_bin_mu_t *, int, int);
-int vect_bin_get_int(_vect_bin_mu_t *, int);
-void vect_bin_get_vect_bin_from(_vect_bin_mu_t *, int, int, _vect_bin_mu_t *);
-_vect_bin_mu_t *vect_bin_set_mpz(_vect_bin_mu_t *t, int from_bit_vect, int nb_bits, mpz_t value, int from_bit_mpz);
-void vect_bin_get_mpz(_vect_bin_mu_t *t, int from_bit, int nb_bits, mpz_t value);
-int vect_bin_cmp_mpz(_vect_bin_mu_t *t, int from_bit_vect, int nb_bits, mpz_t value, int from_bit_mpz);
-void vect_bin_cpy(_vect_bin_mu_t *out, _vect_bin_mu_t *in);
-int vect_bin_is_empty(_vect_bin_mu_t *v);
