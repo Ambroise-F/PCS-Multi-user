@@ -6,18 +6,22 @@
 
 #include<gmp.h>
 #include<omp.h>
+#include<inttypes.h>
 /// type of boolean
 typedef char _bool_t;
 #define _true 1
 #define _false 0
-
-/// Size (in bits) of data stored in a single vector
-#define __DATA_SIZE_IN_BITS__ 57
+#define SIZEOFUSERID 2
+#define USERID_T uint16_t
+// Size (in bits) of data stored in a single vector
+#define __DATA_SIZE_IN_BITS__ (57+(SIZEOFUSERID<<3))
 
 /// Size (in bytes) of data stored in a single vector
 ///Should be equal to ceil(__DATA_SIZE_IN_BITS__/8)
 //#define __DATA_SIZE_IN_BYTES__ (((_vect_bin_size / (sizeof(_vect_bin_t) << 3)) + ((_vect_bin_size % (sizeof(_vect_bin_t) << 3)) ? 1 : 0)))
-#define __DATA_SIZE_IN_BYTES__ 8
+#define __DATA_SIZE_IN_BYTES__ (8+SIZEOFUSERID)
+
+
 
 /// type of one cell of the binary vector
 typedef char _vect_bin_t;
@@ -82,19 +86,11 @@ int vect_bin_cmp_mpz(_vect_bin_t *t, int from_bit_vect, int nb_bits, mpz_t value
 void vect_bin_cpy(_vect_bin_t *out, _vect_bin_t *in);
 int vect_bin_is_empty(_vect_bin_t *v);
 
+//_vect_bin_t *vect_bin_set_int(_vect_bin_t *t, int from_bit_vect, int nb_bits, mpz_t value, int from_bit_mpz);
 
 
-void print_vect_bin(_vect_bin_mu_t *);
-_vect_bin_mu_t *vect_bin_mu_t_reset(_vect_bin_mu_t *);
-_bool_t vect_bin_get_bit(_vect_bin_mu_t *, int);
-void vect_bin_set_1(_vect_bin_mu_t *, int);
-void vect_bin_set_0(_vect_bin_mu_t *, int);
-char *vect_bin_mu_to_binary_string(_vect_bin_mu_t *, char *);
-_vect_bin_mu_t *vect_bin_set_int(_vect_bin_mu_t *, int, int);
-int vect_bin_get_int(_vect_bin_mu_t *, int);
-void vect_bin_get_vect_bin_from(_vect_bin_mu_t *, int, int, _vect_bin_mu_t *);
-_vect_bin_mu_t *vect_bin_set_mpz(_vect_bin_mu_t *t, int from_bit_vect, int nb_bits, mpz_t value, int from_bit_mpz);
-void vect_bin_get_mpz(_vect_bin_mu_t *t, int from_bit, int nb_bits, mpz_t value);
-int vect_bin_cmp_mpz(_vect_bin_mu_t *t, int from_bit_vect, int nb_bits, mpz_t value, int from_bit_mpz);
-void vect_bin_cpy(_vect_bin_mu_t *out, _vect_bin_mu_t *in);
-int vect_bin_is_empty(_vect_bin_mu_t *v);
+
+
+
+_vect_bin_t   *vect_bin_set_userid(_vect_bin_t *t, int from_bit, USERID_T value);
+USERID_T       vect_bin_get_userid(_vect_bin_t *t, int from_bit);

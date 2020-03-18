@@ -244,7 +244,7 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads)
   //nb_threads = __NB_USERS__; // for testing purposes : userid1 = thread number
   for (userid1=0; userid1<__NB_USERS__; userid1++){
     
-#pragma omp parallel private(userid2, R, b, b2, x, r, xDist, xDist_str, trail_length,col) shared(collision_count, X_res, trail_length_max) num_threads(nb_threads)
+  #pragma omp parallel private(userid2, R, b, b2, x, r, xDist, xDist_str, trail_length,col) shared(collision_count, X_res, trail_length_max) num_threads(nb_threads)
     {
       col = 0;
       point_init(&R);
@@ -259,47 +259,39 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads)
       double_and_add(&R, Q[userid1], b, E); // R = bQi
       trail_length = 0;
       collision_count = 0;
-
       while(collision_count < 1) 
         {
-          
           if(is_distinguished_mu(R, trailling_bits, &xDist)) // xDist = R.x >> trailling_bits
             {
               //printf("dist point!\n");fflush(stdout);
-
+	      
               userid2 = __NB_USERS__; // debug / useless
+
               if(struct_add_mu(b2, &userid2, b, userid1, xDist, xDist_str)) // ajout de b dans la mémoire, b2 = b d'un autre point avec collision 
                 {
-                
                   //printf("added\n)");fflush(stdout);
-
                   if(is_collision_mu(x, b, userid1, b2, userid2, trailling_bits)) // si b et b2 forment une vraie collision
                     {
                       //printf("\nThread num %d :\n",omp_get_thread_num());
                       printf("True collision %2hu - %2hu",userid1,userid2);
-		      if(userid1!=userid2)
-			{
-			  printf(" ---- different origin");
-		    
-			}
+		      if(userid1!=userid2) printf(" ---- different origin");
 		      col = 1;
                       printf("\n");
 		      
-#pragma omp critical
+                      #pragma omp critical
                       {
                         collision_count++;
                         mpz_init_set(X_res[userid1],x);
 		      }
                     }
-                  
                 }
               //              else // pt distingué ajouté, pas de collision
-	      if(col==0){
-
-		mpz_urandomb(b, r_state, nb_bits);
-		double_and_add(&R, Q[userid1], b, E); // new start, R = bQi
-		trail_length = 0;
-	      }
+	      if(col==0)
+		{ 
+		  mpz_urandomb(b, r_state, nb_bits);
+		  double_and_add(&R, Q[userid1], b, E); // new start, R = bQi
+		  trail_length = 0;
+		}
             }
           else // R n'est pas un pt dist.
             {
@@ -325,12 +317,10 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads)
             }
           
         } // end while
-
     point_clear(&R);
     mpz_clears(b, b2, x, xDist, NULL);
     gmp_randclear(r_state);
     } // end omp parallel
-
   } // end for
   
   for (userid1=0; userid1<__NB_USERS__; userid1++)

@@ -62,6 +62,8 @@ _vect_bin_t *vect_bin_set_int(_vect_bin_t *t, int from_bit, int value) {
   return(t);
 }
 
+
+
 /// get an int value from a _vect_bin_t type starting at a given bit number
 int vect_bin_get_int(_vect_bin_t *t, int from_bit) {
   int out = 0;
@@ -70,6 +72,31 @@ int vect_bin_get_int(_vect_bin_t *t, int from_bit) {
     if(vect_bin_get_bit(t, from_bit + i)) out |= (1 << i);
   return(out);
 }
+
+
+_vect_bin_t *vect_bin_set_userid(_vect_bin_t *t, int from_bit, USERID_T value) {
+  const int int_bitsize = sizeof(USERID_T)<<3;
+  for(int i = 0; i < int_bitsize; ++i)
+    if(value & (1 << i)) vect_bin_set_1(t, i + from_bit);
+  return(t);
+}
+
+/// get an int value from a _vect_bin_t type starting at a given bit number
+USERID_T vect_bin_get_userid(_vect_bin_t *t, int from_bit) {
+  USERID_T out = 0;
+  const int int_bitsize = sizeof(USERID_T)<<3;
+  for(int i = 0; i < int_bitsize; ++i)
+    if(vect_bin_get_bit(t, from_bit + i)) out |= (1 << i);
+
+  return(out);
+}
+
+
+
+
+
+
+
 
 void print_vect_bin(_vect_bin_t *v) {
   for(int i = 0; i < _vect_bin_array_size; ++i) printf(" %d", v[i]);

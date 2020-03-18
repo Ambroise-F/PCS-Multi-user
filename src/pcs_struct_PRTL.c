@@ -11,17 +11,19 @@
 #include <inttypes.h>
 #include "pcs_vect_bin.h"
 #include "pcs_struct_PRTL.h"
-
+#define FF fflush(stdout)
 static uint8_t nb_bits;
 static uint8_t level;
 static _vect_bin_chain_t *chain_array;
-static _vect_bin_chain_mu_t *chain_array_mu;
+//static _vect_bin_chain_mu_t *chain_array_mu;
 static int chain_array_size;
 static omp_lock_t *locks;
 static int xDist_start;
 static int xDist_end;
 static int a_start;
 static int a_end;
+static int userid_start;
+static int userid_end;
 static int suffix_len;
 /***Memory limiting feature is turned off
     static unsigned long long int memory_limit;
@@ -93,10 +95,13 @@ void struct_init_PRTL_mu(uint8_t _nb_bits, uint8_t trailling_bits, int nb_thread
   level = _level;
   suffix_len = c - level;
   unsigned int __vect_bin_size = nb_bits + suffix_len; //already init as a constant
+  __vect_bin_size += 16;  // userid is 16 bits
   xDist_start = 0;
   xDist_end = suffix_len - 1;
   a_start = suffix_len;
   a_end = xDist_end + nb_bits;
+  userid_start = a_end + 1;  // ie : suffix_len + nb_bits 
+  userid_end = userid_start + 15; // ie : suffix_len + nb_bits + 16 - 1
   chain_array_size = pow(2, level);
   _vect_bin_t_initiate;
     
@@ -227,20 +232,21 @@ int struct_add_PRTL_mu(mpz_t a_out, uint16_t *userid2, mpz_t a_in, uint16_t user
   _vect_bin_chain_t *new;
   _vect_bin_chain_t *last;
   _vect_bin_chain_t *next;
-  mpz_t key_mpz;
+  mpz_t key_mpz,user,user_out;
   int key;
-    
+
   mpz_inits(key_mpz, NULL);
 	
   mpz_and(key_mpz, xDist, mask); // key mpz = mask sur xDist (on récupère partie de gauche -> partie radix tree)
   key = mpz_get_ui(key_mpz); // key radix
   omp_set_lock(&locks[key]);
   next = &chain_array[key]; // ? chain_array ?
-  if(vect_bin_is_empty(next->v))
+  
+  if(vect_bin_is_empty(next->v)) // Rien dans la chaîne : pas de collision
     {
-      vect_bin_set_mpz(next->v, xDist_start, suffix_len, xDist, level); // write xDist in v starting at xDist_start, 
-      vect_bin_set_mpz(next->v, a_start, nb_bits, a_in, 0);
-      
+      vect_bin_set_mpz(next->v, xDist_start, suffix_len, xDist, level); // write suffix_len bits of xDist starting at level in v starting at xDist_start 
+      vect_bin_set_mpz(next->v, a_start, nb_bits, a_in, 0); // write nb_bits bits of a_in in v starting at a_start
+      vect_bin_set_userid(next->v, userid_start, userid1); // write userid in v starting at bit userid_start
       next->nxt=NULL;
     }
   else
@@ -250,12 +256,15 @@ int struct_add_PRTL_mu(mpz_t a_out, uint16_t *userid2, mpz_t a_in, uint16_t user
 	  last = next;
 	  next = next->nxt;
         }
-      if(next != NULL && vect_bin_cmp_mpz(next->v, xDist_start, suffix_len, xDist, level) == 0 ) //collision
+      if(next != NULL && vect_bin_cmp_mpz(next->v, xDist_start, suffix_len, xDist, level) == 0 ) // collision
         {
 	  vect_bin_get_mpz(next->v, a_start, nb_bits, a_out);
+	  *userid2 = vect_bin_get_userid(next->v, userid_start);
+	  
+	    
 	  retval = 1;
         }
-      else
+      else // pas de collision
         {
 	  /***Memory limiting feature is turned off
 	      if(memory_alloc + _vect_bin_alloc_size < memory_limit)
@@ -271,13 +280,16 @@ int struct_add_PRTL_mu(mpz_t a_out, uint16_t *userid2, mpz_t a_in, uint16_t user
 	      vect_bin_t_reset(next->v);
 	      vect_bin_set_mpz(next->v, xDist_start, suffix_len, xDist, level);
 	      vect_bin_set_mpz(next->v, a_start, nb_bits, a_in, 0);
+	      vect_bin_set_userid(next->v, userid_start, userid1);
 
 	      next->nxt = new;   
 	    }
-	  else
+	  else 
 	    {
 	      vect_bin_set_mpz(new->v, xDist_start, suffix_len, xDist, level);
 	      vect_bin_set_mpz(new->v, a_start, nb_bits, a_in, 0);
+	      vect_bin_set_userid(new->v, userid_start, (uint16_t) userid1);
+	      
 	      if(next != NULL) //add in the middle
 		{	
 		  new->nxt = next;

@@ -200,8 +200,8 @@ int main(int argc,char * argv[])
 	   trailling_bits = nb_bits / 4;
 	
        if(!struct_chosen)
-         //add_to_struct_options(structs, struct_i_str, "PRTL", &struct_chosen);
-	 add_to_struct_options(structs, struct_i_str, "hash_unix", &struct_chosen);
+         add_to_struct_options(structs, struct_i_str, "PRTL", &struct_chosen);
+	 //add_to_struct_options(structs, struct_i_str, "hash_unix", &struct_chosen);
 	curve_init(&E);
 	point_init(&P);
         for (int_i=0; int_i<__NB_USERS__;int_i++)
@@ -465,7 +465,7 @@ int main(int argc,char * argv[])
 		printf("*** Test %d ***\n", test_i + 1);
 
                 //for(struct_i = 0; struct_i < __NB_STRUCTURES__; struct_i++)
-                for (struct_i = 1; struct_i < __NB_STRUCTURES__; struct_i++) // hash test
+                for (struct_i = 0; struct_i < __NB_STRUCTURES__; struct_i++) // hash test
                 {
 			if(structs[struct_i] == 1)
 			{
@@ -477,9 +477,9 @@ int main(int argc,char * argv[])
                                 //printf("nb collisions : %d\n",nb_collisions); //to be removed
                                 //printf("pcs_mu_run\n");fflush(stdout);
                                 //pcs_mu_run(x, nb_threads, nb_collisions);
-
+				printf("pcs_mu_run_order ...\n");
                                 pcs_mu_run_order(xs,nb_threads);
-                                
+                                printf("pcs_mu_run_order ok\n");
                                 //printf("pcs_mu_run-ok\n");fflush(stdout);
                                 gettimeofday(&tv2, NULL);
 				time1=(tv1.tv_sec) * 1000000 + tv1.tv_usec;
