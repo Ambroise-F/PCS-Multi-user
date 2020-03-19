@@ -224,7 +224,7 @@ void pcs_mu_init(point_t  P_init,
 /** Run the PCS algorithm.
  *
  */
-long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads)
+long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads, unsigned long long int times[__NB_USERS__])
 {
   point_t R;
   mpz_t b, b2;
@@ -234,16 +234,18 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads)
   int col;
   int trail_length_max = pow(2, trailling_bits) * 20; // 20 * 1<<trailling_bits
   int collision_count = 0;
+  unsigned long long int time1,time2;
   // int userid1;
   // int* userid2;
   uint16_t userid1,userid2;
   char xDist_str[50];
-
+  struct timeval tv1,tv2;
+  //unsigned long long int times[__NB_USERS__];
   //nb_threads = 1;
   //nb_threads = omp_get_max_threads();
   //nb_threads = __NB_USERS__; // for testing purposes : userid1 = thread number
   for (userid1=0; userid1<__NB_USERS__; userid1++){
-    
+    gettimeofday(&tv1,NULL);
   #pragma omp parallel private(userid2, R, b, b2, x, r, xDist, xDist_str, trail_length,col) shared(collision_count, X_res, trail_length_max) num_threads(nb_threads)
     {
       col = 0;
@@ -273,10 +275,11 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads)
                   if(is_collision_mu(x, b, userid1, b2, userid2, trailling_bits)) // si b et b2 forment une vraie collision
                     {
                       //printf("\nThread num %d :\n",omp_get_thread_num());
-                      printf("True collision %2hu - %2hu",userid1,userid2);
-		      if(userid1!=userid2) printf(" ---- different origin");
+                      //printf("True collision %2hu - %2hu",userid1,userid2);
+		      printf("coll(%hu-%hu);",userid1,userid2);
+		      //if(userid1!=userid2) printf(" ---- different origin");
 		      col = 1;
-                      printf("\n");
+                      //printf("\n");
 		      
                       #pragma omp critical
                       {
@@ -321,8 +324,14 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads)
     mpz_clears(b, b2, x, xDist, NULL);
     gmp_randclear(r_state);
     } // end omp parallel
+    gettimeofday(&tv2,NULL);
+    // times.append(tv2-tv1)
+    time1 = (tv1.tv_sec) * 1000000 + tv1.tv_usec;
+    time2 = (tv2.tv_sec) * 1000000 + tv2.tv_usec;
+    times[userid1] = time2 - time1;
+    
   } // end for
-  
+  printf("\n");
   for (userid1=0; userid1<__NB_USERS__; userid1++)
     {
       mpz_init_set(x_res[userid1],X_res[userid1]);
@@ -343,29 +352,26 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads)
  */
 void pcs_mu_clear()
 {
-  uint8_t i;
-  uint32_t j;
- point_clear(&P);
-  for (j=0;j<__NB_USERS__;j++)
+  
+  uint32_t i;
+  point_clear(&P);
+    /*
+  for (i=0;i<__NB_USERS__;i++)
     {
-      point_clear(&Q[j]);
-      
+      point_clear(&Q[i]);
+      //mpz_clears(Q[i].x, Q[i].y, Q[i].z, NULL);
     }
+  free(Q);
+    printf("cleared\n");
+    printf("clearing M... ");fflush(stdout);
+    */
   for(i = 0; i < __NB_ENSEMBLES__; i++)
     {
       point_clear(&M[i]);
       //mpz_clears(M[i].x, M[i].y, M[i].z, NULL);
     }
-  //point_clear(&Q);
+    
   curve_clear(&E);
   mpz_clear(n);
-  /*
-  for(i = 0; i < __NB_ENSEMBLES__; i++)
-    {
-      mpz_clears(M[i].x, M[i].y, M[i].z, NULL);
-    }
-  */
-  //printf("struct_free\n");fflush(stdout);
   struct_free_mu();
-  //printf("struct_free-ok\n");fflush(stdout);
 }

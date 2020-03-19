@@ -142,7 +142,7 @@ int main(int argc,char * argv[])
 	uint8_t struct_chosen = 0;
 	struct timeval tv1;
 	struct timeval tv2;
-	unsigned long long int time, time1, time2;
+	unsigned long long int time, time1, time2,times[__NB_USERS__];
 	unsigned long long int sum_time[__NB_STRUCTURES__] = {0};
 	unsigned long long int sum_memory[__NB_STRUCTURES__] = {0};
 	unsigned long long int sum_nb_points[__NB_STRUCTURES__] = {0};
@@ -170,7 +170,7 @@ int main(int argc,char * argv[])
     //nb_threads=1;
     //printf("max_threads : %d\n",omp_get_max_threads());
     //nb_threads = __NB_USERS__
-          ;nb_tests = 1;
+    nb_tests = 5;
 	line_file_curves = 84;
 	line_file_points = 80;
 	nb_points_file = 10;
@@ -470,34 +470,23 @@ int main(int argc,char * argv[])
 			if(structs[struct_i] == 1)
 			{
 				printf("\t**Structure %s\n", struct_i_str[struct_i]);
-                                //printf("pcs_mu_init\n");fflush(stdout);
                                 pcs_mu_init(P, Q, E, large_prime, A, nb_bits, trailling_bits, struct_i, nb_threads, level);
-                                //printf("pcs_mu_init-ok\n");fflush(stdout);
                                 gettimeofday(&tv1,NULL);
-                                //printf("nb collisions : %d\n",nb_collisions); //to be removed
-                                //printf("pcs_mu_run\n");fflush(stdout);
                                 //pcs_mu_run(x, nb_threads, nb_collisions);
-				printf("pcs_mu_run_order ...\n");
-                                pcs_mu_run_order(xs,nb_threads);
-                                printf("pcs_mu_run_order ok\n");
-                                //printf("pcs_mu_run-ok\n");fflush(stdout);
+                                pcs_mu_run_order(xs,nb_threads,times);
                                 gettimeofday(&tv2, NULL);
 				time1=(tv1.tv_sec) * 1000000 + tv1.tv_usec;
 				time2 = (tv2.tv_sec) * 1000000 + tv2.tv_usec;
 				time = time2 - time1;
-                                //printf("struct_memory\n");fflush(stdout);
-                                memory = struct_memory_mu(&nb_points, &rate_of_use, &rate_slots, nb_threads);                                
-                                //printf("struct_memory-ok\n");fflush(stdout);
-                                //printf("pcs_mu_clear\n");fflush(stdout);
-                                pcs_mu_clear();                
-                                //printf("pcs_mu_clear-ok\n");fflush(stdout);
+                                memory = struct_memory_mu(&nb_points, &rate_of_use, &rate_slots, nb_threads);
+                                pcs_mu_clear();
 
                                 for (key_i = 0; key_i<__NB_USERS__; key_i++)
                                   {
                                     ok = 1;
                                     if(mpz_cmp(xs[key_i], keys[key_i])==0)
                                       {
-                                        printf("key n°%d is OK\n",key_i);
+                                        //printf("key n°%d is OK\n",key_i);
                                         //gmp_printf("key was %Zd - result is %Zd\n",keys[key_i],xs[key_i]);
                                       }
                                     else
@@ -507,7 +496,7 @@ int main(int argc,char * argv[])
                                         printf("key n°%d is false - ERROR\n",key_i);
                                         gmp_printf("key was %Zd - result is %Zd\n",keys[key_i],xs[key_i]);
                                         //exit(2);
-					//break;
+					break;
                                       }
                                   }
                                 printf("\n");
@@ -518,11 +507,26 @@ int main(int argc,char * argv[])
                                 else
                                   {
                                     printf("Erreur dans le calcul d'au moins une clé\n");
+				    break;
                                   }
 
                                 
-                                mpz_init_set(x,key); //workaround - to be removed
+                                
                                                                         
+				/*** Write execution time for each user ***/
+				file_res=fopen(RESULTS_PATH"time_mu.all","a");
+				if (file_res == NULL) 
+				{
+					fprintf(stderr, "Can not open file time_mu.all (see constant RESULTS_PATH in main.c)\n");
+					exit(1);
+				}
+				fprintf(file_res,"%hu %d %s %d %d %"SCNu8, __NB_USERS__,nb_bits, struct_i_str[struct_i], nb_threads, trailling_bits, level);
+				for (int_i=0;int_i<__NB_USERS__;int_i++)
+				  {
+				    fprintf(file_res," %lld",times[int_i]);
+				  }
+				fprintf(file_res,"\n");
+				fclose(file_res);
 				
 				/*** Write execution time ***/
 				file_res=fopen(RESULTS_PATH"time.all","a");
@@ -567,6 +571,7 @@ int main(int argc,char * argv[])
 		}
 		test_i++;
 	}
+	
 	curve_clear(&E);
 	point_clear(&P);
         for (int_i = 0; int_i < __NB_USERS__; int_i++)

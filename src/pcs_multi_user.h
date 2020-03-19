@@ -4,7 +4,6 @@
 #include <inttypes.h>
 #include "pcs.h"
 
-#define __NB_ENSEMBLES_MU__ 1
 #define __NB_USERS__ 30
 
 //void combLin(point_t * R, mpz_t a, mpz_t b);
@@ -25,7 +24,8 @@ long long int pcs_mu_run(mpz_t x_res,
                            int nb_collisions);
 
 long long int pcs_mu_run_order(mpz_t x_res[__NB_USERS__],
-                           int nb_threads);
+			       int nb_threads,
+			       unsigned long long int times[__NB_USERS__]);
 
 
 
