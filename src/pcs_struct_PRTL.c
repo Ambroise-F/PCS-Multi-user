@@ -232,7 +232,7 @@ int struct_add_PRTL_mu(mpz_t a_out, uint16_t *userid2, mpz_t a_in, uint16_t user
   _vect_bin_chain_t *new;
   _vect_bin_chain_t *last;
   _vect_bin_chain_t *next;
-  mpz_t key_mpz,user,user_out;
+  mpz_t key_mpz;
   int key;
 
   mpz_inits(key_mpz, NULL);
@@ -303,6 +303,46 @@ int struct_add_PRTL_mu(mpz_t a_out, uint16_t *userid2, mpz_t a_in, uint16_t user
   mpz_clears(key_mpz, NULL);
   return retval;
 }
+
+
+int struct_search_PRTL_mu(mpz_t a_out, uint16_t *userid2, mpz_t xDist)
+{
+  uint8_t retval = 0;
+  _vect_bin_chain_t *last;
+  _vect_bin_chain_t *next;
+  mpz_t key_mpz;
+  int key;
+
+  mpz_inits(key_mpz, NULL);
+	
+  mpz_and(key_mpz, xDist, mask); // key mpz = mask sur xDist (on récupère partie de gauche -> partie radix tree)
+  key = mpz_get_ui(key_mpz); // key radix
+  omp_set_lock(&locks[key]);
+  next = &chain_array[key]; // ? chain_array ?
+  
+  if(!vect_bin_is_empty(next->v))
+    {
+      while(next != NULL && vect_bin_cmp_mpz(next->v, xDist_start, suffix_len, xDist, level) < 0)
+        {
+	  last = next;
+	  next = next->nxt;
+        }
+      if(next != NULL && vect_bin_cmp_mpz(next->v, xDist_start, suffix_len, xDist, level) == 0 ) // collision
+        {
+	  vect_bin_get_mpz(next->v, a_start, nb_bits, a_out);
+	  *userid2 = vect_bin_get_userid(next->v, userid_start);
+	  retval = 1;
+        }
+
+    }
+  omp_unset_lock(&locks[key]);
+  mpz_clears(key_mpz, NULL);
+  return retval;
+}
+
+
+
+
 
 /** Free the allocated memory for the Packed Radix-Tree-List.
  *

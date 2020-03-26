@@ -14,13 +14,16 @@ typedef char _bool_t;
 #define SIZEOFUSERID 2
 #define USERID_T uint16_t
 // Size (in bits) of data stored in a single vector
-#define __DATA_SIZE_IN_BITS__ (57+(SIZEOFUSERID<<3))
+//#define __DATA_SIZE_IN_BITS__ (57+(SIZEOFUSERID<<3)) // works for 45 but not for 50 bits
+//#define __DATA_SIZE_IN_BITS__ (57+10+(SIZEOFUSERID<<3)) // works for 50 but not for 55?
+#define __DATA_SIZE_IN_BITS__ (107+(SIZEOFUSERID<<3)) // works for 55?
+
 
 /// Size (in bytes) of data stored in a single vector
 ///Should be equal to ceil(__DATA_SIZE_IN_BITS__/8)
 //#define __DATA_SIZE_IN_BYTES__ (((_vect_bin_size / (sizeof(_vect_bin_t) << 3)) + ((_vect_bin_size % (sizeof(_vect_bin_t) << 3)) ? 1 : 0)))
-#define __DATA_SIZE_IN_BYTES__ (8+SIZEOFUSERID)
-
+#define __DATA_SIZE_IN_BYTES__ (14+SIZEOFUSERID) // default is 8 + ...
+// 65 bits ??
 
 
 /// type of one cell of the binary vector

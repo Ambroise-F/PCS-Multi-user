@@ -16,3 +16,5 @@ void struct_init_PRTL_mu(uint8_t nb_bits, uint8_t trailling_bits, int nb_threads
 int struct_add_PRTL_mu(mpz_t a_out, uint16_t *userid2, mpz_t a_in, uint16_t userid1, mpz_t xDist);
 void struct_free_PRTL_mu(void);
 unsigned long long int struct_memory_PRTL_mu(unsigned long int *nb_points, float *rate_of_use, float *rate_slots);
+
+int struct_search_PRTL_mu(mpz_t a_out, uint16_t *userid2, mpz_t xDist);

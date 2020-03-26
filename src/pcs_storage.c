@@ -89,6 +89,35 @@ int struct_add_mu(mpz_t a_out, int16_t *userid2, mpz_t a_in, int16_t userid1, mp
 }
 
 
+/** Search but doesn't insert.
+ *  
+ *  @brief Look for a point in the structure.  
+ *  
+ *  @param[out]	a_out	The a coefficient of the found point.
+ *  @param[out] userid2 The userid of the found point.               
+ *  @param[in]	xDist	The x coordinate, without the trailling zeros.
+ *  @return 	1 if the point was found, 0 otherwise.
+ */
+
+
+int struct_search_mu(mpz_t a_out, int16_t *userid2, mpz_t xDist, char xDist_str[])
+{
+  // TODO : stocker le userid1 dans la structure et renvoyer le userid2 du point ayant donné la collision. -- done?
+	switch(struct_type)
+	{
+        case 0: return struct_search_PRTL_mu(a_out, userid2, xDist);
+			break;
+        default:
+          {mpz_get_str(xDist_str, 16, xDist); return struct_search_hash_mu(a_out, userid2, xDist_str);}
+	}
+}
+
+
+
+
+
+
+
 /** Free the distinguished-point-storing structure.
  * 
  */

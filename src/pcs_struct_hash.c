@@ -250,6 +250,37 @@ int struct_add_hash_mu(mpz_t a_out, uint16_t *userid2, mpz_t a_in, uint16_t user
 	return retval;
 }
 
+
+
+int struct_search_hash_mu(mpz_t a_out, uint16_t *userid2, char xDist[])
+{
+  unsigned long int h = 0;
+  hashUNIX_mu_t *new;
+  hashUNIX_mu_t *last;
+  hashUNIX_mu_t *next;
+  uint8_t retval = 0;
+	
+  h = get_hash(xDist); // hash
+  omp_set_lock(&table_locks[h]); // lock thread on h (so 2 threads with the same h don't collide)
+  next = table_mu[h]; 
+  while(next != NULL && next-> key != NULL && strncmp(xDist, next->key, strlen(xDist)) > 0)
+    {
+      last = next;
+      next = next->next;
+    }
+	
+  if(next != NULL && next->key != NULL && strcmp(xDist, next->key) == 0 ) //collision
+    {
+      mpz_set_str(a_out, next->a_, 62); // a_out from a_ (stored in string base62)
+      *userid2 =  next->user;
+      retval = 1;
+    }
+  omp_unset_lock(&table_locks[h]);
+  return retval;
+}
+
+
+
 // ************************************ //
 
 

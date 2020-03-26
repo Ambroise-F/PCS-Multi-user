@@ -148,6 +148,7 @@ int main(int argc,char * argv[])
 	unsigned long long int sum_nb_points[__NB_STRUCTURES__] = {0};
 	unsigned long long int memory;
 	unsigned long int nb_points;
+	unsigned long int pts_per_users[__NB_USERS__];
 	float rate_of_use, rate_slots;
 	mpz_t key;
 	mpz_t x;
@@ -170,7 +171,7 @@ int main(int argc,char * argv[])
     //nb_threads=1;
     //printf("max_threads : %d\n",omp_get_max_threads());
     //nb_threads = __NB_USERS__
-    nb_tests = 5;
+    nb_tests = 1;
 	line_file_curves = 84;
 	line_file_points = 80;
 	nb_points_file = 10;
@@ -199,11 +200,12 @@ int main(int argc,char * argv[])
     if(trailling_bits == 0)
 	   trailling_bits = nb_bits / 4;
 	
-       if(!struct_chosen)
-         add_to_struct_options(structs, struct_i_str, "PRTL", &struct_chosen);
-	 //add_to_struct_options(structs, struct_i_str, "hash_unix", &struct_chosen);
-	curve_init(&E);
-	point_init(&P);
+    if(!struct_chosen){
+      add_to_struct_options(structs, struct_i_str, "PRTL", &struct_chosen);
+      add_to_struct_options(structs, struct_i_str, "hash_unix", &struct_chosen);
+    }
+    curve_init(&E);
+    point_init(&P);
         for (int_i=0; int_i<__NB_USERS__;int_i++)
           {
             point_init(&Q[int_i]);
@@ -473,7 +475,7 @@ int main(int argc,char * argv[])
                                 pcs_mu_init(P, Q, E, large_prime, A, nb_bits, trailling_bits, struct_i, nb_threads, level);
                                 gettimeofday(&tv1,NULL);
                                 //pcs_mu_run(x, nb_threads, nb_collisions);
-                                pcs_mu_run_order(xs,nb_threads,times);
+                                pcs_mu_run_order(xs,nb_threads,times,pts_per_users);
                                 gettimeofday(&tv2, NULL);
 				time1=(tv1.tv_sec) * 1000000 + tv1.tv_usec;
 				time2 = (tv2.tv_sec) * 1000000 + tv2.tv_usec;
@@ -512,7 +514,25 @@ int main(int argc,char * argv[])
 
                                 
                                 
-                                                                        
+
+
+				/*** Write number of points needed to find one collision for each user ***/
+				file_res=fopen(RESULTS_PATH"nbpts_mu.all","a");
+				if (file_res == NULL) 
+				{
+					fprintf(stderr, "Can not open file nbpts_mu.all (see constant RESULTS_PATH in main.c)\n");
+					exit(1);
+				}
+				fprintf(file_res,"%hu %d %s %d %d %"SCNu8, __NB_USERS__,nb_bits, struct_i_str[struct_i], nb_threads, trailling_bits, level);
+				for (int_i=0;int_i<__NB_USERS__;int_i++)
+				  {
+				    fprintf(file_res," %lu",pts_per_users[int_i]);
+				  }
+				fprintf(file_res,"\n");
+				fclose(file_res);
+				
+
+				
 				/*** Write execution time for each user ***/
 				file_res=fopen(RESULTS_PATH"time_mu.all","a");
 				if (file_res == NULL) 

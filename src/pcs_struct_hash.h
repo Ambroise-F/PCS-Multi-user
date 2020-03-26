@@ -42,3 +42,4 @@ void struct_free_hash_mu(void);
 unsigned long long int struct_memory_hash_mu(unsigned long int *nb_points, float *rate_of_use, float *rate_slots);
 
 
+int struct_search_hash_mu(mpz_t a_out, uint16_t *userid2, char xDist[]);

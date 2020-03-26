@@ -15,6 +15,8 @@
 #include "pcs_multi_user.h"
 
 #define FF fflush(stdout)
+#define verbose 0
+
 
 elliptic_curve_t E;
 point_t P;
@@ -224,7 +226,7 @@ void pcs_mu_init(point_t  P_init,
 /** Run the PCS algorithm.
  *
  */
-long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads, unsigned long long int times[__NB_USERS__])
+long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads, unsigned long long int times[__NB_USERS__],unsigned long int pts_per_users[__NB_USERS__])
 {
   point_t R;
   mpz_t b, b2;
@@ -240,98 +242,114 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads, unsigned long long
   uint16_t userid1,userid2;
   char xDist_str[50];
   struct timeval tv1,tv2;
+  unsigned long int nb_pts;
   //unsigned long long int times[__NB_USERS__];
   //nb_threads = 1;
   //nb_threads = omp_get_max_threads();
   //nb_threads = __NB_USERS__; // for testing purposes : userid1 = thread number
-  for (userid1=0; userid1<__NB_USERS__; userid1++){
-    gettimeofday(&tv1,NULL);
-  #pragma omp parallel private(userid2, R, b, b2, x, r, xDist, xDist_str, trail_length,col) shared(collision_count, X_res, trail_length_max) num_threads(nb_threads)
+  for (userid1=0; userid1<__NB_USERS__; userid1++)
     {
-      col = 0;
-      point_init(&R);
-      mpz_inits(x, b, b2, xDist, NULL);
-
+      pts_per_users[userid1] = 0;
+      gettimeofday(&tv1,NULL);
+#pragma omp parallel private(nb_pts,userid2, R, b, b2, x, r, xDist, xDist_str, trail_length,col) shared(collision_count, X_res, trail_length_max,pts_per_users) num_threads(nb_threads)
+      {
+	nb_pts = 0;
+	col = 0;
+	point_init(&R);
+	mpz_inits(x, b, b2, xDist, NULL);
+	
+	
+	//Initialize a starting point
+	gmp_randstate_t r_state;
+	gmp_randinit_default(r_state);
+	gmp_randseed_ui(r_state, time(NULL) * omp_get_thread_num() + 1);
+	mpz_urandomb(b, r_state, nb_bits); // random b
+	double_and_add(&R, Q[userid1], b, E); // R = bQi
+	trail_length = 0;
+	collision_count = 0;
+	while(collision_count < 1) 
+	  {
+	    if(is_distinguished_mu(R, trailling_bits, &xDist)) // xDist = R.x >> trailling_bits
+	      {
+		//printf("dist point!\n");fflush(stdout);
 		
-      //Initialize a starting point
-      gmp_randstate_t r_state;
-      gmp_randinit_default(r_state);
-      gmp_randseed_ui(r_state, time(NULL) * omp_get_thread_num() + 1);
-      mpz_urandomb(b, r_state, nb_bits); // random b
-      double_and_add(&R, Q[userid1], b, E); // R = bQi
-      trail_length = 0;
-      collision_count = 0;
-      while(collision_count < 1) 
-        {
-          if(is_distinguished_mu(R, trailling_bits, &xDist)) // xDist = R.x >> trailling_bits
-            {
-              //printf("dist point!\n");fflush(stdout);
-	      
-              userid2 = __NB_USERS__; // debug / useless
-
-              if(struct_add_mu(b2, &userid2, b, userid1, xDist, xDist_str)) // ajout de b dans la mémoire, b2 = b d'un autre point avec collision 
-                {
-                  //printf("added\n)");fflush(stdout);
-                  if(is_collision_mu(x, b, userid1, b2, userid2, trailling_bits)) // si b et b2 forment une vraie collision
-                    {
+		userid2 = __NB_USERS__; // debug / useless
+		nb_pts++;
+		//printf(".");FF;
+		
+		if(struct_add_mu(b2, &userid2, b, userid1, xDist, xDist_str)) // ajout de b dans la mémoire, b2 = b d'un autre point avec collision 
+		  {
+		    //printf("added\n)");fflush(stdout);
+		    if(is_collision_mu(x, b, userid1, b2, userid2, trailling_bits)) // si b et b2 forment une vraie collision
+		      {
                       //printf("\nThread num %d :\n",omp_get_thread_num());
                       //printf("True collision %2hu - %2hu",userid1,userid2);
-		      printf("coll(%hu-%hu);",userid1,userid2);
-		      //if(userid1!=userid2) printf(" ---- different origin");
-		      col = 1;
-                      //printf("\n");
-		      
-                      #pragma omp critical
-                      {
-                        collision_count++;
-                        mpz_init_set(X_res[userid1],x);
+			if(verbose)
+			  printf("coll(%hu-%hu);",userid1,userid2);
+			//if(userid1!=userid2) printf(" ---- different origin");
+			col = 1;
+			//printf("\n");
+			
+                        #pragma omp critical
+			{
+			  collision_count++;
+			  mpz_init_set(X_res[userid1],x);
+			}
 		      }
-                    }
-                }
-              //              else // pt distingué ajouté, pas de collision
-	      if(col==0)
-		{ 
-		  mpz_urandomb(b, r_state, nb_bits);
-		  double_and_add(&R, Q[userid1], b, E); // new start, R = bQi
-		  trail_length = 0;
-		}
-            }
-          else // R n'est pas un pt dist.
-            {
+		  }
+		//              else // pt distingué ajouté, pas de collision
+		if(col==0)
+		  { 
+		    mpz_urandomb(b, r_state, nb_bits);
+		    double_and_add(&R, Q[userid1], b, E); // new start, R = bQi
+		    trail_length = 0;
+		  }
+	      }
+	    else // R n'est pas un pt dist.
+	      {
 
             
-              r=hash(R.y); // y%20
-              //printf("f...\n");FF;
-              //printf("%d,%d\n",userid1,r);FF;
-              //gmp_printf("%Zd\n",M[userid1][r].x);FF;
-              f(R, M[r], &R, E); // 1 step (among 20) of the path
-              //gmp_printf("%Zd.",M[userid1][r].x);
-              //gmp_printf("%Zd-",M[userid1][r].y);FF;
-              //printf("f - ok\n");FF;
+		r=hash(R.y); // y%20
+		//printf("f...\n");FF;
+		//printf("%d,%d\n",userid1,r);FF;
+		//gmp_printf("%Zd\n",M[userid1][r].x);FF;
+		f(R, M[r], &R, E); // 1 step (among 20) of the path
+		//gmp_printf("%Zd.",M[userid1][r].x);
+		//gmp_printf("%Zd-",M[userid1][r].y);FF;
+		//printf("f - ok\n");FF;
               
-              trail_length++;
-              if(trail_length > trail_length_max)
-                {
-                  mpz_urandomb(b, r_state, nb_bits); // new random start  
-                  double_and_add(&R, Q[userid1], b, E);
-                  trail_length = 0;
-                }
+		trail_length++;
+		if(trail_length > trail_length_max)
+		  {
+		    mpz_urandomb(b, r_state, nb_bits); // new random start  
+		    double_and_add(&R, Q[userid1], b, E);
+		    trail_length = 0;
+		  }
 
-            }
+	      }
           
-        } // end while
-    point_clear(&R);
-    mpz_clears(b, b2, x, xDist, NULL);
-    gmp_randclear(r_state);
-    } // end omp parallel
-    gettimeofday(&tv2,NULL);
-    // times.append(tv2-tv1)
-    time1 = (tv1.tv_sec) * 1000000 + tv1.tv_usec;
-    time2 = (tv2.tv_sec) * 1000000 + tv2.tv_usec;
-    times[userid1] = time2 - time1;
+	  } // end while
+	//printf("thread %d : %lu\n",omp_get_thread_num(),nb_pts);
+	#pragma omp critical
+	{
+	  pts_per_users[userid1]+=nb_pts;
+	}
+	
+	point_clear(&R);
+	mpz_clears(b, b2, x, xDist, NULL);
+	gmp_randclear(r_state);
+      } // end omp parallel
+      
+      printf("user %d : %lu pts\n",userid1,pts_per_users[userid1]); 
+      gettimeofday(&tv2,NULL);
+      // times.append(tv2-tv1)
+      time1 = (tv1.tv_sec) * 1000000 + tv1.tv_usec;
+      time2 = (tv2.tv_sec) * 1000000 + tv2.tv_usec;
+      times[userid1] = time2 - time1;
     
-  } // end for
-  printf("\n");
+    } // end for
+  if (verbose)
+    printf("\n");
   for (userid1=0; userid1<__NB_USERS__; userid1++)
     {
       mpz_init_set(x_res[userid1],X_res[userid1]);
@@ -355,16 +373,16 @@ void pcs_mu_clear()
   
   uint32_t i;
   point_clear(&P);
-    /*
-  for (i=0;i<__NB_USERS__;i++)
+  /*
+    for (i=0;i<__NB_USERS__;i++)
     {
-      point_clear(&Q[i]);
-      //mpz_clears(Q[i].x, Q[i].y, Q[i].z, NULL);
+    point_clear(&Q[i]);
+    //mpz_clears(Q[i].x, Q[i].y, Q[i].z, NULL);
     }
-  free(Q);
+    free(Q);
     printf("cleared\n");
     printf("clearing M... ");fflush(stdout);
-    */
+  */
   for(i = 0; i < __NB_ENSEMBLES__; i++)
     {
       point_clear(&M[i]);
