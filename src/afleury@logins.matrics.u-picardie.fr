@@ -211,19 +211,17 @@ int main(int argc,char * argv[])
 		}
 	}
 	
+    
+    if(trailling_bits == 0)
+	   trailling_bits = nb_bits / 4;
 	
-	if(trailling_bits == 0)
-	  {
-	    trailling_bits = nb_bits / 4;
-	    //trailling_bits = trailling_bits + (uint8_t) round(log2(sqrt(sqrt(__NB_USERS__)))) ;
-	  }
-	if(!struct_chosen){
-	  add_to_struct_options(structs, struct_i_str, "PRTL", &struct_chosen);
-	  add_to_struct_options(structs, struct_i_str, "hash_unix", &struct_chosen);
-	}
-	
-	curve_init(&E);
-	point_init(&P);
+    if(!struct_chosen){
+      add_to_struct_options(structs, struct_i_str, "PRTL", &struct_chosen);
+      add_to_struct_options(structs, struct_i_str, "hash_unix", &struct_chosen);
+    }
+    
+    curve_init(&E);
+    point_init(&P);
         for (int_i=0; int_i<__NB_USERS__;int_i++)
           {
             point_init(&Q[int_i]);

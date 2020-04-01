@@ -16,7 +16,8 @@
 
 #define FF fflush(stdout)
 #define verbose 0
-
+//#define SEED (time(null))
+//#define SEED 0xE5CA1ADE
 
 elliptic_curve_t E;
 point_t P;
@@ -83,13 +84,16 @@ void lin_comb_mu(point_t * R, mpz_t a)
  *
  */
 //int is_collision(mpz_t x, mpz_t a1, mpz_t a2, int trailling_bits)
-int is_collision_mu(mpz_t x, mpz_t b1, uint16_t userid1, mpz_t b2, uint16_t userid2, int trailling_bits)
+int is_collision_mu(mpz_t x, mpz_t b1, uint16_t userid1, mpz_t b2, uint16_t userid2, int trailling_bits, mpz_t x_true1, mpz_t x_true2)
 {
 	uint8_t r;
 	mpz_t xDist_;
 	int retval = 0;
 	mpz_t a1, a2;
 	point_t R;
+	// mpz_t xR, xI; // debug
+	
+	
         
 	point_init(&R);
 	mpz_inits(a1, a2, xDist_, NULL);
@@ -97,7 +101,12 @@ int is_collision_mu(mpz_t x, mpz_t b1, uint16_t userid1, mpz_t b2, uint16_t user
 	mpz_set_ui(a2, 0); // a1 = a2 = 0
 	mpz_set_ui(a1, 0);
 
-
+	if (userid1!=userid2){
+	  if (mpz_cmp(x_true1,x_true2)==0)
+	    {
+	      printf("même clé : %d,%d\n",userid1,userid2);FF;
+	    }
+	}
 
 	
 	//recompute first a,b pair
@@ -125,9 +134,37 @@ int is_collision_mu(mpz_t x, mpz_t b1, uint16_t userid1, mpz_t b2, uint16_t user
 
 
 
+	// debug
+	/*
+	if (userid1==2771)
+	  {
+	    gmp_printf("a1 = %-10Zd, b1 = %-10Zd, a2 = %-10Zd, b2 = %-10Zd, x1 = %-10Zd, x2 = %-10Zd\n",a1,b1,a2,b2,x_true1,x_true2);
+	    gmp_printf("n = %Zd\n",n);
 
+	    mpz_inits(xR, xI, NULL);
+        
+	    mpz_mul(xR,b2,x_true2);  // b2*x2
+	    mpz_mmod(xR,xR,n);
+	    gmp_printf("xR = %Zd\n",xR);
+	    mpz_add(xR,xR,a2);  // +a2
+	    mpz_mmod(xR,xR,n);
+	    gmp_printf("xR = %Zd\n",xR);
+	    mpz_sub(xR,xR,a1);  // -a1
+	    mpz_mmod(xR,xR,n);
+	    gmp_printf("xR = %Zd\n",xR);
+	    mpz_invert(xI,b1,n);// b1^-1 mod n
+	    gmp_printf("xI = %Zd\n",xI);
+	    mpz_mul(xR,xR,xI);  // (b2*x2+a2-a1) * (b1^-1)
+	    mpz_mmod(xR,xR,n);
+	    gmp_printf("x = %Zd\n",xR);
+	    
 	
-	if(userid1==userid2 && mpz_cmp(b1, b2) != 0) //two different pairs with the same Q, so collision
+	    mpz_clears(xR,xI, NULL);
+	  }
+	
+	// end debug
+	*/
+	if(userid1==userid2 && (mpz_cmp(b1, b2) != 0)) //two different pairs with the same Q, so collision
 	{
           if(!same_point_mu(R, a1, b1,userid1)) //it's the inverse point // to be modified
 		{	
@@ -226,7 +263,7 @@ void pcs_mu_init(point_t  P_init,
 /** Run the PCS algorithm.
  *
  */
-long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads, unsigned long long int times[__NB_USERS__],unsigned long int pts_per_users[__NB_USERS__])
+long long int pcs_mu_run_order(mpz_t x_res[__NB_USERS__], int nb_threads, unsigned long long int times[__NB_USERS__],unsigned long int pts_per_users[__NB_USERS__],mpz_t x_true[__NB_USERS__])
 {
   point_t R;
   mpz_t b, b2;
@@ -247,6 +284,7 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads, unsigned long long
   //nb_threads = 1;
   //nb_threads = omp_get_max_threads();
   //nb_threads = __NB_USERS__; // for testing purposes : userid1 = thread number
+  
   for (userid1=0; userid1<__NB_USERS__; userid1++)
     {
       pts_per_users[userid1] = 0;
@@ -262,7 +300,7 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads, unsigned long long
 	//Initialize a starting point
 	gmp_randstate_t r_state;
 	gmp_randinit_default(r_state);
-	gmp_randseed_ui(r_state, time(NULL) * omp_get_thread_num() + 1);
+	gmp_randseed_ui(r_state, SEED * (userid1+1) * (omp_get_thread_num() + 1));
 	mpz_urandomb(b, r_state, nb_bits); // random b
 	double_and_add(&R, Q[userid1], b, E); // R = bQi
 	trail_length = 0;
@@ -280,13 +318,15 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads, unsigned long long
 		if(struct_add_mu(b2, &userid2, b, userid1, xDist, xDist_str)) // ajout de b dans la mémoire, b2 = b d'un autre point avec collision 
 		  {
 		    //printf("added\n)");fflush(stdout);
-		    if(is_collision_mu(x, b, userid1, b2, userid2, trailling_bits)) // si b et b2 forment une vraie collision
+		    if(is_collision_mu(x, b, userid1, b2, userid2, trailling_bits,x_true[userid1],x_true[userid2])) // si b et b2 forment une vraie collision
 		      {
                       //printf("\nThread num %d :\n",omp_get_thread_num());
                       //printf("True collision %2hu - %2hu",userid1,userid2);
 			if(verbose)
-			  printf("coll(%hu-%hu);",userid1,userid2);
-			//if(userid1!=userid2) printf(" ---- different origin");
+			  {
+			    printf("coll(%hu-%hu);",userid1,userid2);FF;
+			  }
+			  //if(userid1!=userid2) printf(" ---- different origin");
 			col = 1;
 			//printf("\n");
 			
@@ -340,13 +380,18 @@ long long int pcs_mu_run_order(mpz_t x_res[], int nb_threads, unsigned long long
 	gmp_randclear(r_state);
       } // end omp parallel
       
-      printf("user %d : %lu pts\n",userid1,pts_per_users[userid1]); 
+      //printf("user %d : %lu pts\n",userid1,pts_per_users[userid1]); 
       gettimeofday(&tv2,NULL);
       // times.append(tv2-tv1)
       time1 = (tv1.tv_sec) * 1000000 + tv1.tv_usec;
       time2 = (tv2.tv_sec) * 1000000 + tv2.tv_usec;
       times[userid1] = time2 - time1;
-    
+      if (verbose && !userid1%((int)(__NB_USERS__/100)))
+	{ 
+	  printf("#");FF;
+	}
+
+      
     } // end for
   if (verbose)
     printf("\n");
