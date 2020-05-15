@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include "pcs.h"
 
-#define __NB_USERS__ 65535
+#define __NB_USERS__ 16
 //#define __NB_USERS__ 1
 
 

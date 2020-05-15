@@ -26,7 +26,7 @@
 //#define SEED 0xE5CA1ADE
 
 /** Generates random number of EXACTLY nb_bits bits stored as an mpz_t type.
- * 	
+ *
  * 	@param[out]	s			Will hold the resulting number.
  * 	@param[in]	nb_bits		The number of bits (size of the number). *      @param[in]      shift           shift on the seed
  *      @param[in]      n               large prime number
@@ -40,16 +40,16 @@ void generate_random_key(mpz_t s, int nb_bits, int shift, mpz_t n)
 	unsigned long int seed;
 	gmp_randstate_t r_state;
 	srand(SEED*shift); // shift to avoid getting the same seed on the same second on 2 different calls
-	seed = rand(); // seed of randinit 
-	gmp_randinit_default(r_state); 
+	seed = rand(); // seed of randinit
+	gmp_randinit_default(r_state);
 	gmp_randseed_ui(r_state, seed); // r_state is initialised with the seed
-	
-	mpz_inits(min, max, interval, NULL);	
+
+	mpz_inits(min, max, interval, NULL);
 	mpz_ui_pow_ui(min, 2, (nb_bits - 1)); // min = 1<<nb_bits-1
 	mpz_ui_pow_ui(max, 2, nb_bits); // max = 1<<nb_bits
         mpz_sub(interval, max, min); // interval = max - min
 
-	
+
 	mpz_urandomm(s, r_state, max); // s picked at random between 0 and max - 1
 	if(mpz_cmp(s, min) < 0) // s < min
 	{
@@ -61,9 +61,9 @@ void generate_random_key(mpz_t s, int nb_bits, int shift, mpz_t n)
 	    if(mpz_cmp(s, min) < 0) // s < min
 	      {
 		mpz_add(s, s, interval); // s+= interval
-	      } 
+	      }
 	  }
-	
+
 	mpz_clears(min, max, interval, NULL);
 	gmp_randclear(r_state);
 }
@@ -71,7 +71,7 @@ void generate_random_key(mpz_t s, int nb_bits, int shift, mpz_t n)
 
 
 /** Generates 20 sets for the adding walks.
- * 
+ *
  * 	@param[out]		A	The A coefficient set.
  * 	@param[in]		max	The maximum value of a coefficient.
  */
@@ -91,7 +91,7 @@ void generate_adding_sets(mpz_t A[20], mpz_t max)
 }
 
 /** Generates 20 sets for the adding walks.
- * 
+ *
  * 	@param[out]		A	The A coefficient set.
  * 	@param[out]		B	The B coefficient set.
  * 	@param[in]		max	The maximum value of a coefficient.
@@ -135,7 +135,7 @@ void add_to_struct_options(uint8_t structs[], char **struct_i_str, char *opt, ui
 }
 
 int main(int argc,char * argv[])
-{	
+{
 	elliptic_curve_t E;
 	char str_A[4], str_B[4], str_p[40], str_large_prime[40], str_X[40],str_Y[40];
 	char *struct_i_str[] = {"PRTL", "hash_unix"};
@@ -168,7 +168,7 @@ int main(int argc,char * argv[])
 	mpz_t x;
         mpz_t keys[__NB_USERS__];
         mpz_t xs[__NB_USERS__];
-        
+
 	char option;
 	uint8_t nb_bits, trailling_bits, nb_curve, line_file_curves, line_file_points, nb_points_file, nb_point, j, struct_i, level;
 	int test_i, nb_tests, nb_threads,int_i,key_i,ok;
@@ -178,10 +178,10 @@ int main(int argc,char * argv[])
     level = 7;
 	nb_bits = 35;
     trailling_bits = 0;
-   
+
     nb_threads = omp_get_max_threads(); // NBTHREADS
     //nb_threads = 8;
-    printf("Using %d threads (max_threads)\n",nb_threads);
+
     //nb_threads=1;
     //printf("max_threads : %d\n",omp_get_max_threads());
     //nb_threads = __NB_USERS__
@@ -210,8 +210,8 @@ int main(int argc,char * argv[])
 				break;
 		}
 	}
-	
-	
+	printf("Using %d threads (max_threads : %d)\n",nb_threads,omp_get_max_threads());
+
 	if(trailling_bits == 0)
 	  {
 	    trailling_bits = nb_bits / 4;
@@ -221,7 +221,7 @@ int main(int argc,char * argv[])
 	  add_to_struct_options(structs, struct_i_str, "PRTL", &struct_chosen);
 	  add_to_struct_options(structs, struct_i_str, "hash_unix", &struct_chosen);
 	}
-	
+
 	curve_init(&E);
 	point_init(&P);
         for (int_i=0; int_i<__NB_USERS__;int_i++)
@@ -232,9 +232,9 @@ int main(int argc,char * argv[])
 	mpz_inits(x,large_prime, key, NULL);
         for (int_i=0; int_i<__NB_USERS__;int_i++)
           {
-            mpz_inits(xs[int_i],keys[int_i],NULL); 
+            mpz_inits(xs[int_i],keys[int_i],NULL);
           }
-        
+
 	for(j=0;j<__NB_ENSEMBLES__;j++)
 	{
 		mpz_inits(A[j],NULL);
@@ -244,7 +244,7 @@ int main(int argc,char * argv[])
 
 	/*** read curve ***/
 	file_curves = fopen("curves","r");
-	if (file_curves == NULL) 
+	if (file_curves == NULL)
 	{
 		fprintf(stderr, "Can not open file curves.\n");
 		exit(1);
@@ -260,7 +260,7 @@ int main(int argc,char * argv[])
 	mpz_set_str(E.B, str_B, 10);
 	mpz_set_str(E.p, str_p, 10);
 	mpz_set_str(large_prime, str_large_prime, 10);
-		
+
 	generate_adding_sets(A, large_prime);
 
         test_i = 0;
@@ -270,7 +270,7 @@ int main(int argc,char * argv[])
                 /*** read point P ***/
 		nb_point = test_i % 10 + 1;
 		file_points = fopen("points","r");
-		if (file_points == NULL) 
+		if (file_points == NULL)
 		{
 			fprintf(stderr, "Can not open file points.\n");
 			exit(1);
@@ -293,12 +293,12 @@ int main(int argc,char * argv[])
                     mpz_init_set(keys[int_i],key);
                     //gmp_printf("Key n°%d : %Zd\n",int_i,key);
                     double_and_add(&Q[int_i], P, key, E);
-                  }		
+                  }
 		/******* BEGIN: Setting up environment for experiment running and statistics *******/
-		
+
 		/*** Update possible values of argument f (field/nb_bits) in experiments ***/
 		file_conf = fopen(RESULTS_PATH"conf_avg/f.conf","r");
-		if (file_conf == NULL) 
+		if (file_conf == NULL)
 		{
 			fprintf(stderr, "Can not open configuration file (see constant RESULTS_PATH in main.c)\n");
 			exit(1);
@@ -322,7 +322,7 @@ int main(int argc,char * argv[])
 		if(update)
 		{
 			file_conf=fopen(RESULTS_PATH"conf_avg/f.conf","w");
-			if (file_conf == NULL) 
+			if (file_conf == NULL)
 			{
 				fprintf(stderr, "Can not open configuration file (see constant RESULTS_PATH in main.c)\n");
 				exit(1);
@@ -330,14 +330,14 @@ int main(int argc,char * argv[])
 			fprintf(file_conf, "%s %2" SCNu8, conf_str, nb_bits);
 			fclose(file_conf);
 		}
-		
+
 		/*** Update possible values of argument s (storage structure) in experiments ***/
 		for(struct_i = 0; struct_i < __NB_STRUCTURES__; struct_i++)
 		{
 			if(structs[struct_i] == 1)
 			{
 				file_conf = fopen(RESULTS_PATH"conf_avg/s.conf","r");
-				if (file_conf == NULL) 
+				if (file_conf == NULL)
 				{
 					fprintf(stderr, "Can not open configuration file (see constant RESULTS_PATH in main.c)\n");
 					exit(1);
@@ -361,7 +361,7 @@ int main(int argc,char * argv[])
 				if(update)
 				{
 					file_conf=fopen(RESULTS_PATH"conf_avg/s.conf","w");
-					if (file_conf == NULL) 
+					if (file_conf == NULL)
 					{
 						fprintf(stderr, "Can not open configuration file (see constant RESULTS_PATH in main.c)\n");
 						exit(1);
@@ -371,10 +371,10 @@ int main(int argc,char * argv[])
 				}
 			}
 		}
-		
+
 		/*** Update possible values of argument t (thread number) in experiments ***/
 		file_conf = fopen(RESULTS_PATH"conf_avg/t.conf","r");
-		if (file_conf == NULL) 
+		if (file_conf == NULL)
 		{
 			fprintf(stderr, "Can not open configuration file (see constant RESULTS_PATH in main.c)\n");
 			exit(1);
@@ -398,7 +398,7 @@ int main(int argc,char * argv[])
 		if(update)
 		{
 			file_conf=fopen(RESULTS_PATH"conf_avg/t.conf","w");
-			if (file_conf == NULL) 
+			if (file_conf == NULL)
 			{
 				fprintf(stderr, "Can not open configuration file (see constant RESULTS_PATH in main.c)\n");
 				exit(1);
@@ -406,10 +406,10 @@ int main(int argc,char * argv[])
 			fprintf(file_conf, "%s %d", conf_str, nb_threads);
 			fclose(file_conf);
 		}
-		
+
 		/*** Update possible values of argument d (number of trailling bits to zero) in experiments ***/
 		file_conf = fopen(RESULTS_PATH"conf_avg/theta.conf","r");
-		if (file_conf == NULL) 
+		if (file_conf == NULL)
 		{
 			fprintf(stderr, "Can not open configuration file (see constant RESULTS_PATH in main.c)\n");
 			exit(1);
@@ -433,7 +433,7 @@ int main(int argc,char * argv[])
 		if(update)
 		{
 			file_conf=fopen(RESULTS_PATH"conf_avg/theta.conf","w");
-			if (file_conf == NULL) 
+			if (file_conf == NULL)
 			{
 				fprintf(stderr, "Can not open configuration file (see constant RESULTS_PATH in main.c)\n");
 				exit(1);
@@ -441,7 +441,7 @@ int main(int argc,char * argv[])
 			fprintf(file_conf, "%s %2" SCNu8, conf_str, trailling_bits);
 			fclose(file_conf);
 		}
-		
+
 		/*** Update possible values of argument l (level of the abstract radix tree) in experiments ***/
 		file_conf = fopen(RESULTS_PATH"conf_avg/l.conf","r");
 		if (file_conf == NULL)
@@ -476,10 +476,10 @@ int main(int argc,char * argv[])
 			fprintf(file_conf, "%s %2" SCNu8, conf_str, level);
 			fclose(file_conf);
 		}
-		
+
 		/******* END: Setting up environment for experiment running and statistics *******/
-		
-	        
+
+
 		/* Test different structures */
 		printf("*** Test %d ***\n", test_i + 1);
 
@@ -529,13 +529,13 @@ int main(int argc,char * argv[])
 				    break;
                                   }
 
-                                
-                                
+
+
 
 
 				/*** Write number of points needed to find one collision for each user ***/
 				file_res=fopen(RESULTS_PATH"nbpts_mu.all","a");
-				if (file_res == NULL) 
+				if (file_res == NULL)
 				{
 					fprintf(stderr, "Can not open file nbpts_mu.all (see constant RESULTS_PATH in main.c)\n");
 					exit(1);
@@ -547,12 +547,12 @@ int main(int argc,char * argv[])
 				  }
 				fprintf(file_res,"\n");
 				fclose(file_res);
-				
 
-				
+
+
 				/*** Write execution time for each user ***/
 				file_res=fopen(RESULTS_PATH"time_mu.all","a");
-				if (file_res == NULL) 
+				if (file_res == NULL)
 				{
 					fprintf(stderr, "Can not open file time_mu.all (see constant RESULTS_PATH in main.c)\n");
 					exit(1);
@@ -564,40 +564,40 @@ int main(int argc,char * argv[])
 				  }
 				fprintf(file_res,"\n");
 				fclose(file_res);
-				
+
 				/*** Write execution time ***/
 				file_res=fopen(RESULTS_PATH"time.all","a");
-				if (file_res == NULL) 
+				if (file_res == NULL)
 				{
 					fprintf(stderr, "Can not open file time.all (see constant RESULTS_PATH in main.c)\n");
 					exit(1);
 				}
 				fprintf(file_res,"%d %s %d %d %"SCNu8" %llu\n", nb_bits, struct_i_str[struct_i], nb_threads, trailling_bits, level, time);
 				fclose(file_res);
-				
+
 				/*** Write memory usage ***/
 				file_res=fopen(RESULTS_PATH"memory.all","a");
-				if (file_res == NULL) 
+				if (file_res == NULL)
 				{
 					fprintf(stderr, "Can not open file memory.all (see constant RESULTS_PATH in main.c)\n");
 					exit(1);
 				}
 				fprintf(file_res,"%d %s %d %d %"SCNu8" %llu\n", nb_bits, struct_i_str[struct_i], nb_threads, trailling_bits, level, memory);
 				fclose(file_res);
-				
+
 				/*** Write number of stored points ***/
 				file_res=fopen(RESULTS_PATH"points.all","a");
-				if (file_res == NULL) 
+				if (file_res == NULL)
 				{
 					fprintf(stderr, "Can not open file points.all (see constant RESULTS_PATH in main.c)\n");
 					exit(1);
 				}
 				fprintf(file_res,"%d %s %d %d %"SCNu8" %lu\n", nb_bits, struct_i_str[struct_i], nb_threads, trailling_bits, level, nb_points);
 				fclose(file_res);
-				
+
 				/*** Write rate of memory use ***/
 				file_res=fopen(RESULTS_PATH"rate.all","a");
-				if (file_res == NULL) 
+				if (file_res == NULL)
 				{
 					fprintf(stderr, "Can not open file rate.all (see constant RESULTS_PATH in main.c)\n");
 					exit(1);
@@ -608,7 +608,7 @@ int main(int argc,char * argv[])
 		}
 		test_i++;
 	}
-	
+
 	curve_clear(&E);
 	point_clear(&P);
         for (int_i = 0; int_i < __NB_USERS__; int_i++)
@@ -620,5 +620,5 @@ int main(int argc,char * argv[])
 	{
 		mpz_clears(A[j],NULL);
 	}
-        
+
 }
