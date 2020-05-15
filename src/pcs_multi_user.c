@@ -84,7 +84,7 @@ void lin_comb_mu(point_t * R, mpz_t a)
 *
 */
 //int is_collision(mpz_t x, mpz_t a1, mpz_t a2, int trailling_bits)
-int is_collision_mu(mpz_t x, mpz_t b1, uint16_t userid1, mpz_t b2, uint16_t userid2, int trailling_bits, mpz_t x_true1, mpz_t x_true2)
+int is_collision_mu(mpz_t x, mpz_t b1, uint16_t userid1, mpz_t b2, uint16_t userid2, int trailling_bits)
 {
 	uint8_t r;
 	mpz_t xDist_;
@@ -100,13 +100,6 @@ int is_collision_mu(mpz_t x, mpz_t b1, uint16_t userid1, mpz_t b2, uint16_t user
 
 	mpz_set_ui(a2, 0); // a1 = a2 = 0
 	mpz_set_ui(a1, 0);
-
-	if (userid1!=userid2){
-		if (mpz_cmp(x_true1,x_true2)==0)
-		{
-			printf("même clé : %d,%d\n",userid1,userid2);FF;
-		}
-	}
 
 
 	//recompute first a,b pair
@@ -253,7 +246,7 @@ void pcs_mu_init(point_t  P_init,
 		trailling_bits = trailling_bits_init;
 		nb_bits = nb_bits_init;
 
-		struct_init_mu(type_struct, n, trailling_bits, nb_bits, nb_threads, level); // TODO : mu adaptation : done?
+		struct_init_mu(type_struct, n, trailling_bits, nb_bits, nb_threads, level,__NB_USERS__); // TODO : mu adaptation : done?
 	}
 
 
@@ -263,7 +256,7 @@ void pcs_mu_init(point_t  P_init,
 	/** Run the PCS algorithm.
 	*
 	*/
-	long long int pcs_mu_run_order(mpz_t x_res[__NB_USERS__], int nb_threads, unsigned long long int times[__NB_USERS__],unsigned long int pts_per_users[__NB_USERS__],mpz_t x_true[__NB_USERS__])
+	long long int pcs_mu_run_order(mpz_t x_res[__NB_USERS__], int nb_threads, unsigned long long int times[__NB_USERS__],unsigned long int pts_per_users[__NB_USERS__])
 	{
 		point_t R;
 		mpz_t b, b2;
@@ -324,7 +317,7 @@ void pcs_mu_init(point_t  P_init,
 						{
 							//printf("*");FF;
 							//printf("added\n)");fflush(stdout);
-							if(is_collision_mu(x, b, userid1, b2, userid2, trailling_bits,x_true[userid1],x_true[userid2])) // si b et b2 forment une vraie collision
+							if(is_collision_mu(x, b, userid1, b2, userid2, trailling_bits)) // si b et b2 forment une vraie collision
 							{
 								//printf("\nThread num %d :\n",omp_get_thread_num());
 								//printf("True collision %2hu - %2hu",userid1,userid2);

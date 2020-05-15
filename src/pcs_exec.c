@@ -492,7 +492,7 @@ int main(int argc,char * argv[])
                                 pcs_mu_init(P, Q, E, large_prime, A, nb_bits, trailling_bits, struct_i, nb_threads, level);
                                 gettimeofday(&tv1,NULL);
                                 //pcs_mu_run(x, nb_threads, nb_collisions);
-                                pcs_mu_run_order(xs,nb_threads,times,pts_per_users,keys);
+                                pcs_mu_run_order(xs,nb_threads,times,pts_per_users);
                                 gettimeofday(&tv2, NULL);
 				time1=(tv1.tv_sec) * 1000000 + tv1.tv_usec;
 				time2 = (tv2.tv_sec) * 1000000 + tv2.tv_usec;

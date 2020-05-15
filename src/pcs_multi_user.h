@@ -30,8 +30,7 @@ long long int pcs_mu_run(mpz_t x_res,
 long long int pcs_mu_run_order(mpz_t x_res[__NB_USERS__],
 			       int nb_threads,
 			       unsigned long long int times[__NB_USERS__],
-			       unsigned long int pts_per_users[__NB_USERS__],
-			       mpz_t x_true[__NB_USERS__]);
+			       unsigned long int pts_per_users[__NB_USERS__]);
 
 
 
