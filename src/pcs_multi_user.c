@@ -323,7 +323,7 @@ void pcs_mu_init(point_t  P_init,
 								//printf("True collision %2hu - %2hu",userid1,userid2);
 								if(verbose)
 								{
-									printf("coll(%hu-%hu);",userid1,userid2);FF;
+									printf("(%d)coll(%hu-%hu);\n",omp_get_thread_num(),userid1,userid2);FF;
 								}
 								//if(userid1!=userid2) printf(" ---- different origin");
 								//printf("\n");
@@ -335,6 +335,7 @@ void pcs_mu_init(point_t  P_init,
 								}
 								#pragma omp critical (userid_update)
 								{
+
 									if (!pts_per_users[userid1]) // first thread to find user
 									{
 										gettimeofday(&tv2,NULL);
@@ -365,11 +366,12 @@ void pcs_mu_init(point_t  P_init,
 								// update userid1
 								if (userid_uptodate > userid1)
 								{
-									userid1 = userid_uptodate;
+
 									#pragma omp critical (userid_update)
 									{
 										pts_per_users[userid1]+=nb_pts;
 									}
+									userid1 = userid_uptodate;
 									nb_pts = 0;
 								}
 								if(userid1>=__NB_USERS__)break;
@@ -383,11 +385,11 @@ void pcs_mu_init(point_t  P_init,
 							// update userid1
 							if (userid_uptodate > userid1)
 							{
-								userid1 = userid_uptodate;
 								#pragma omp critical (userid_update)
 								{
 									pts_per_users[userid1]+=nb_pts;
 								}
+								userid1 = userid_uptodate;
 								nb_pts = 0;
 							}
 							if(userid1>=__NB_USERS__)break;
@@ -406,11 +408,11 @@ void pcs_mu_init(point_t  P_init,
 							// update userid1
 							if (userid_uptodate > userid1)
 							{
-								userid1 = userid_uptodate;
 								#pragma omp critical (userid_update)
 								{
 									pts_per_users[userid1]+=nb_pts;
 								}
+								userid1 = userid_uptodate;
 								nb_pts = 0;
 							}
 							if(userid1>=__NB_USERS__)break;
